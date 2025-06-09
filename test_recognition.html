@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Face Recognition & Registration</title>
+</head>
+<body>
+  <h2>Register Face (via Upload)</h2>
+  <input type="text" id="username" placeholder="Enter username" required><br><br>
+  <input type="email" id="email" placeholder="Enter email" required><br><br>
+  <input type="text" id="mobile" placeholder="Enter mobile number" required><br><br>
+  <input type="file" id="fileInput" accept="image/*" required><br><br>
+  <button onclick="uploadFile()">Upload & Register</button>
+
+  <hr>
+
+  <h2>Capture Photo & Recognize Face</h2>
+  <video id="video" width="320" height="240" autoplay></video><br>
+  <button id="snap">Capture & Recognize</button>
+  <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+  <p id="result"></p>
+
+  <script>
+    // --- Registration via Upload ---
+    function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const mobile = document.getElementById('mobile').value.trim();
+
+      if (!username) {
+        alert("Please enter username");
+        return;
+      }
+      if (!email) {
+        alert("Please enter email");
+        return;
+      }
+      if (!mobile) {
+        alert("Please enter mobile number");
+        return;
+      }
+      if (fileInput.files.length === 0) {
+        alert("Please select an image file");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('username', username);
+      formData.append('email', email);
+      formData.append('mobile', mobile);
+      formData.append('image', fileInput.files[0]);
+
+      fetch('http://127.0.0.1:5000/register', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => alert(JSON.stringify(data)))
+      .catch(err => alert("Error: " + err));
+    }
+
+    // --- Recognition Section ---
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const snapBtn = document.getElementById('snap');
+    const resultP = document.getElementById('result');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { video.srcObject = stream; })
+      .catch(err => { alert("Error accessing camera: " + err); });
+
+    snapBtn.onclick = () => {
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        const formData = new FormData();
+        formData.append('image', blob, 'capture.png');
+
+        fetch('http://164.52.213.175:5051/recognize', {
+          method: 'POST',
+          body: formData
+        })
+        .then(async res => {
+          const text = await res.text(); // read response as text
+          try {
+            const data = JSON.parse(text); // try parsing it as JSON
+            if (data.match) {
+              resultP.innerText = `✅ Recognized user: ${data.user} (Distance: ${data.distance?.toFixed(2)})`;
+            } else if (data.user) {
+              resultP.innerText = `❌ No match found (Closest: ${data.user}, Distance: ${data.distance?.toFixed(2)})`;
+            } else if (data.error) {
+              resultP.innerText = `⚠️ Error: ${data.error}`;
+            } else {
+              resultP.innerText = `❌ Unknown error`;
+            }
+          } catch (err) {
+            console.error("Failed to parse response:", text);
+            resultP.innerText = `❌ Server sent invalid response:\n` + text;
+          }
+        })
+        .catch(err => {
+          resultP.innerText = '❌ Network error: ' + err;
+        });
+
+      }, 'image/png');
+    };
+
+  </script>
+</body>
+</html>
