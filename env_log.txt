@@ -1,0 +1,1 @@
+DEEFACE_HOME = C:/inetpub/wwwroot/attendance_backend/.deepface_cache

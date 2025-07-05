@@ -111,7 +111,7 @@ def register_user():
         cv2.imwrite(save_path, img)  # Save full color image
 
         # Store user info + image path in DB
-        register_user_to_db(username, email, mobilenumber, save_path)  # Update your function to accept these params
+        register_user_to_db(username, email, mobilenumber, save_path, ref_id=None, ref_type=None)  # Update your function to accept these params
 
         return jsonify({
             "isSuccess": True,
@@ -127,6 +127,89 @@ def register_user():
             "message": f"Server error: {str(e)}"
         }), 500
 
+@app.route('/register_v2', methods=['POST'])
+def register_v2():
+    print("Register V2 endpoint hit")
+    try:
+        ref_id = request.form.get("ref_id")
+        ref_type = request.form.get("ref_type")
+
+        if not ref_id:
+            return jsonify({
+                "isSuccess": False,
+                "message": "ref_id is required"
+            }), 400
+
+        if not ref_type:
+            return jsonify({
+                "isSuccess": False,
+                "message": "ref_type is required"
+            }), 400
+
+        if 'image' not in request.files:
+            return jsonify({
+                "isSuccess": False,
+                "message": "No image file uploaded"
+            }), 400
+
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({
+                "isSuccess": False,
+                "message": "Empty file name"
+            }), 400
+
+        # Read image as color
+        img_array = np.frombuffer(file.read(), np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+        if img is None:
+            return jsonify({
+                "isSuccess": False,
+                "message": "Invalid image"
+            }), 400
+
+        # Preprocessing: denoise and blur
+        img = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
+        img = cv2.GaussianBlur(img, (3, 3), 0)
+
+        # Face detection
+        faces = face_cascade.detectMultiScale(
+            cv2.cvtColor(img, cv2.COLOR_BGR2GRAY),
+            scaleFactor=1.1,
+            minNeighbors=5
+        )
+
+        if len(faces) == 0:
+            return jsonify({
+                "isSuccess": False,
+                "message": "No face detected"
+            }), 400
+
+        # Save image
+        safe_name = f"{ref_type}_{ref_id}"
+        user_folder = os.path.join(USERS_DIR, safe_name)
+        os.makedirs(user_folder, exist_ok=True)
+
+        save_path = os.path.join(user_folder, "1.jpg")
+        cv2.imwrite(save_path, img)
+
+        # Store user info in DB (reuse same function, update it if needed to handle ref_type logic)
+        register_user_to_db(username=None, email=None, mobilenumber=None, photo_path=save_path, ref_id=ref_id, ref_type=ref_type)  # pass None for email and phone
+
+        return jsonify({
+            "isSuccess": True,
+            "message": f"User '{ref_id}' registered successfully",
+            "imagePath": save_path
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "isSuccess": False,
+            "message": f"Server error: {str(e)}"
+        }), 500
 
 
     

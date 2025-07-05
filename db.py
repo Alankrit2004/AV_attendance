@@ -23,30 +23,38 @@ def get_next_label():
 def fetch_all_users_with_embeddings():
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id AS user_id, username, email, mobilenumber, embedding, photo_path FROM users")
+
+    cursor.execute("""
+        SELECT id, username, embedding, photo_path, email, mobile, ref_id, ref_type
+        FROM users
+    """)
     rows = cursor.fetchall()
 
     users = []
     for row in rows:
-        user_id, username, email, mobilenumber, embedding_json, photo_path = row
+        user_id, username, embedding_json, photo_path, email, mobile, ref_id, ref_type = row
         try:
             embedding = json.loads(embedding_json)
         except Exception:
-            embedding = None
+            embedding = None  # Skip invalid data
 
         if embedding:
             users.append({
                 "user_id": user_id,
                 "username": username,
-                "email": email,
-                "mobilenumber": mobilenumber,
                 "embedding": embedding,
-                "photo_path": photo_path
+                "photo_path": photo_path,
+                "email": email,
+                "mobile": mobile,
+                "ref_id": ref_id,
+                "ref_type": ref_type
             })
 
     cursor.close()
     conn.close()
     return users
+
+
 
 
 
@@ -60,34 +68,46 @@ def get_username_by_label(label):
     return result[0] if result else None
 
 
-def register_user_to_db(username, email, mobilenumber, image_path):
+def register_user_to_db(username=None, email=None, mobile=None, image_path=None, ref_id=None, ref_type=None):
     conn = connect_db()
     cursor = conn.cursor()
 
-    # Read the image
+    # Read image and extract embedding
     img = cv2.imread(image_path)
     if img is None:
         raise Exception("Could not read image at path: " + image_path)
 
-    # Get embedding using DeepFace with SFace
     embedding_result = DeepFace.represent(img_path=image_path, model_name="SFace", enforce_detection=False)
     embedding = embedding_result[0]["embedding"]
     embedding_json = json.dumps(embedding)
 
-    # Check if user already exists
-    cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", (username,))
-    if cursor.fetchone()[0] > 0:
-        # Update existing user's info
-        cursor.execute(
-            "UPDATE users SET email = ?, mobilenumber = ?, photo_path = ?, embedding = ? WHERE username = ?",
-            (email, mobilenumber, image_path, embedding_json, username)
-        )
+    # --- Check if user exists ---
+    if username:
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", (username,))
+        exists = cursor.fetchone()[0] > 0
+    elif ref_id and ref_type:
+        cursor.execute("SELECT COUNT(*) FROM users WHERE ref_id = ? AND ref_type = ?", (ref_id, ref_type))
+        exists = cursor.fetchone()[0] > 0
     else:
-        # Insert new user
-        cursor.execute(
-            "INSERT INTO users (username, email, mobilenumber, photo_path, embedding) VALUES (?, ?, ?, ?, ?)",
-            (username, email, mobilenumber, image_path, embedding_json)
-        )
+        raise Exception("Either username or (ref_id and ref_type) must be provided")
+
+    # --- Update or Insert ---
+    if exists:
+        if username:
+            cursor.execute("""
+                UPDATE users SET email = ?, mobile = ?, photo_path = ?, embedding = ?, ref_id = ?, ref_type = ?
+                WHERE username = ?
+            """, (email, mobile, image_path, embedding_json, ref_id, ref_type, username))
+        else:
+            cursor.execute("""
+                UPDATE users SET photo_path = ?, embedding = ?, username = ?, email = ?, mobile = ?
+                WHERE ref_id = ? AND ref_type = ?
+            """, (image_path, embedding_json, username, email, mobile, ref_id, ref_type))
+    else:
+        cursor.execute("""
+            INSERT INTO users (username, email, mobile, photo_path, embedding, ref_id, ref_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (username, email, mobile, image_path, embedding_json, ref_id, ref_type))
 
     conn.commit()
     cursor.close()
@@ -95,14 +115,4 @@ def register_user_to_db(username, email, mobilenumber, image_path):
 
 
 
-def log_attendance(username):
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
-    row = cursor.fetchone()
-    if row:
-        user_id = row[0]
-        cursor.execute("INSERT INTO attendance (user_id) VALUES (?)", (user_id,))
-        conn.commit()
-    cursor.close()
-    conn.close()
+
