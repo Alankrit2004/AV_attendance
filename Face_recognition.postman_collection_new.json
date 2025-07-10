@@ -1,0 +1,150 @@
+{
+	"info": {
+		"_postman_id": "b730cec2-7561-4251-abac-42a803e7c744",
+		"name": "Face_recognition",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "41733097",
+		"_collection_link": "https://test-team-2245.postman.co/workspace/face-recognition~6c6a813a-2df3-4559-bd58-11ad15cbcdd1/collection/41733097-b730cec2-7561-4251-abac-42a803e7c744?action=share&source=collection_link&creator=41733097"
+	},
+	"item": [
+		{
+			"name": "register_face",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "multipart/form-data",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "username",
+							"value": "alankrit12",
+							"type": "text"
+						},
+						{
+							"key": "image",
+							"type": "file",
+							"src": "/C:/Users/alank/OneDrive/Pictures/Camera Roll 1/resume.png"
+						},
+						{
+							"key": "email",
+							"value": "test1@gmail.com",
+							"type": "text"
+						},
+						{
+							"key": "mobilenumber",
+							"value": "7987748048",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://164.52.213.175:5051/register",
+					"protocol": "http",
+					"host": [
+						"164",
+						"52",
+						"213",
+						"175"
+					],
+					"port": "5051",
+					"path": [
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "register_face_v2",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "multipart/form-data",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "ref_id",
+							"value": "alankrit2004",
+							"type": "text"
+						},
+						{
+							"key": "image",
+							"type": "file",
+							"src": "/C:/Users/alank/OneDrive/Pictures/Camera Roll 1/resume.png"
+						},
+						{
+							"key": "ref_type",
+							"value": "intern",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://164.52.213.175:5051/register_v2",
+					"protocol": "http",
+					"host": [
+						"164",
+						"52",
+						"213",
+						"175"
+					],
+					"port": "5051",
+					"path": [
+						"register_v2"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "recognize",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "type",
+						"value": "multipart/form-data",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "image",
+							"type": "file",
+							"src": "/C:/Users/alank/OneDrive/Pictures/Camera Roll 1/IMG_20250213_132849.jpg"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://164.52.213.175:5051/recognize",
+					"protocol": "http",
+					"host": [
+						"164",
+						"52",
+						"213",
+						"175"
+					],
+					"port": "5051",
+					"path": [
+						"recognize"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

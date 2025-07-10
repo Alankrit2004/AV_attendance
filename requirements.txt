@@ -5,3 +5,6 @@ numpy
 deepface
 tensorflow
 tf-keras
+fastapi
+python-multipart
+uvicorn
